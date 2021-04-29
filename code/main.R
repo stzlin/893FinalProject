@@ -1,5 +1,7 @@
 library('R.matlab')
 setwd("/Users/stephanie/UNC-chapel hill/Spring2021/STOR893/FinalProject/data/")
+
+### Load Data ###
 filename = system.file('SC/HCP_cortical_DesikanAtlas_SC.mat', package = 'R.matlab')
 
 path <- system.file("mat-files", package = "R.matlab")
@@ -16,3 +18,9 @@ TNPCA_Functional <- readMat(pathname2)
 
 pathname <- file.path("traits/175traits", "HCP_175Traits.mat")
 traits<-readMat(pathname)
+### Merge Data ###
+data
+### Exploratory Data Analysis ###
+
+
+
