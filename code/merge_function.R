@@ -49,7 +49,7 @@ df=data.frame(df,TNPCA_SC_Score,TNPCA_FC_Score)
 TNPCA_SC_Score_start=FC_end+1
 TNPCA_SC_Score_end=TNPCA_SC_Score_start+dim(TNPCA_SC_Score)[2]-1
 TNPCA_FC_Score_start=TNPCA_SC_Score_end+1
-TNPCA_FC_Score_start=TNPCA_FC_Score_start+dim(TNPCA_FC_Score)[2]-1
+TNPCA_FC_Score_end=TNPCA_FC_Score_start+dim(TNPCA_FC_Score)[2]-1
 #Keep subjects who have SC and FC data.
 traits_data=data.frame(id=traits$hcp.subj.id,t(traits$traits.175))
 traits_data=traits_data[traits$hcp.subj.id %in% df$id,]
