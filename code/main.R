@@ -1,5 +1,6 @@
 library('R.matlab')
-setwd("/Users/stephanie/UNC-chapel hill/Spring2021/STOR893/FinalProject/data/")
+
+setwd("/Users/stephanie/UNC-chapel hill/Spring2021/STOR893/893FinalProject/data/")
 
 ### Load Data ###
 filename = system.file('SC/HCP_cortical_DesikanAtlas_SC.mat', package = 'R.matlab')
@@ -18,9 +19,15 @@ TNPCA_Functional <- readMat(pathname2)
 
 pathname <- file.path("traits/175traits", "HCP_175Traits.mat")
 traits<-readMat(pathname)
-### Merge Data ###
-data
+### Merge Data & Data Cleaning ###
+dir = "/Users/stephanie/UNC-chapel hill/Spring2021/STOR893/893FinalProject/code"
+source(paste0(dir,"/merge_function.R"))
+results <- mergedata(SC,FC,TNPCA_Structural,TNPCA_Functional,traits)
+data<- results$df
+
 ### Exploratory Data Analysis ###
 
 
+
+### Prediction
 
