@@ -25,7 +25,6 @@ for (k in 239:1065){
 }
 # Remove all zeros columns
 SC_vectorize = SC_vectorize[ ,which(apply(SC_vectorize, 2,var)!=0)]
-
 #Note that FC is a symmetric matrix and FC[i,i]=1. So when we vectorize FC (68*68 matrix), we also convert it to a 67+66+...+1=2278 dimension vector.
 identical(FC$subj.list,SC$all.id)
 #True
