@@ -11,11 +11,16 @@ library(ggfortify)
 library(scatterplot3d)
 library(profvis)
 library(Hmisc)
+library(tree)
+library(randomForest)
+library(class)
+library(e1071)
 dir = "/Users/stephanie/UNC-chapel hill/Spring2021/STOR893/893FinalProject/code"
 source(paste0(dir,"/merge_function.R"))
 source(paste0(dir,"/reorder_cormat.R"))
 source(paste0(dir,"/get_upper_tri.R"))
 source(paste0(dir,"/traits_category_correlation.R"))
+source(paste0(dir,"/prediction.R"))
 
 setwd("/Users/stephanie/UNC-chapel hill/Spring2021/STOR893/893FinalProject/data/")
 
@@ -213,3 +218,126 @@ traits_category_correlation(data,results$traits_start,traits.category, Main.cate
 
 ### Prediction
 
+#Find the number of SC PCA scores we need to keep that can explain at least 60% of total variance.
+x_sc=which(cumsum(var_explained_sc$var_explained)>60)[1]
+#Find the number of FC PCA scores we need to keep that can explain at least 60% of total variance.
+x_fc=which(cumsum(var_explained_fc$var_explained)>60)[1]
+#Use SC PCA score, FC PCA score, TNPCA_SC_Score and TNPCA_FC_Score for prediction.
+X=data.frame(sc.pca$x[,1:x_sc],fc.pca$x[,1:x_fc],
+data[,results$TNPCA_SC_Score_start:results$TNPCA_SC_Score_end],
+data[,results$TNPCA_FC_Score_start:results$TNPCA_FC_Score_end])
+
+###SC PC1 can distringuish top 100 values and bottom 100 values in 51th trait. So we first try to predict 51th trait.
+i1 = 51
+y1=data[,results$traits_start+i1-1]
+data1=data.frame(y=y1,X)
+#Remove subjects that have NA in 51th trait.
+data1=drop_na(data1)
+
+##Regression
+#Make a training data and testing data (approximately 2/3 observations as training data)
+set.seed(66)
+index1=sort(sample(nrow(data1),round(nrow(data1)*2/3)))
+train1<-data1[index1,]
+test1<-data1[-index1,]
+
+##Linear regression
+lm1<-lm(y~.,train1)
+testingerror_lm1<-sqrt(sum((predict(lm1,test1)-test1$y)^2)/length(test1$y))
+testingerror_lm1
+
+##Single regression tree
+fit1.single.full <- tree(y~., train1)
+testingerror_singletree1<-sqrt(sum((predict(fit1.single.full,test1)-test1$y)^2)/length(test1$y))
+testingerror_singletree1
+
+##Random forest,build the best possible random forest
+#ntree
+set.seed(123)
+fit1.rf <- randomForest(y~., train1, mtry=10, ntree=1000)
+plot(fit1.rf, col="red", pch=16, type="p", main="default plot")
+#We may need 300 trees.
+#Choose "mtry"
+rf1.error.p <- 1:50  # set up a vector of length 20
+for (p in 1:50)  # repeat the following code inside { } 20 times
+{
+  fit1.rf <- randomForest(y~., train1, mtry=p, ntree=300)
+  rf1.error.p[p] <- fit1.rf$mse[300]  # collecting oob mse based on 250 trees
+}
+rf1.error.p
+plot(1:50, rf1.error.p, pch=16,
+     xlab="mtry",
+     ylab="OOB mse of mtry")
+lines(1:50, rf1.error.p)
+#We chose ntree=300 and mtry=k1.
+k1=which.min(rf1.error.p)
+#Final random forest model.
+fit1.rf.final <- randomForest(y~., train1, mtry=k1, ntree=300)
+testingerror_rf1<-sqrt(sum((predict(fit1.rf.final,test1)-test1$y)^2)/length(test1))
+testingerror_rf1
+
+
+##Classification
+#Reorder data based on 51th trait value
+data2=data1[order(data1[,1], decreasing = TRUE),]
+#Create High/Low (1/0) label
+data2$y=0
+data2$y[1:round(dim(data2)[1]/2)]=1
+#Encoding the target feature
+data2$y=factor(data2$y,levels=c(0,1))
+#Make a training data and testing data (approximately 2/3 observations as training data)
+set.seed(88)
+index2=sort(sample(nrow(data2),round(nrow(data2)*2/3)))
+train2<-data2[index2,]
+test2<-data2[-index2,]
+#Feature scaling
+train2[-1]=scale(train2[-1])
+test2[-1]=scale(test2[-1])
+
+##knn
+sqrt(dim(train2)[1])
+#Square root of number of observations in training dataset is around 26.55, therefore we’ll create two models. One with ‘K’ value as 26 and the other model with a ‘K’ value as 27.
+knn.26 <- knn(train=train2, test=test2, cl=train2$y, k=26)
+knn.27 <- knn(train=train2, test=test2, cl=train2$y, k=27)
+#Making confusion matrix
+cm_knn26=table(test2$y,knn.26)
+#Calculate accuracy
+acc_knn26=sum(diag(cm_knn26))/sum(cm_knn26)
+cm_knn27=table(test2$y,knn.27)
+acc_knn27=sum(diag(cm_knn27))/sum(cm_knn27)
+acc_knn26
+acc_knn27
+#Optimization, find value "K" that model has highest accuracy.
+i=1
+k.optm=1
+for (i in 1:30){
+knn.mod <- knn(train=train2, test=test2, cl=train2$y, k=i)
+cm_knn=table(test2$y,knn.mod)
+k.optm[i] <- sum(diag(cm_knn))/sum(cm_knn)
+k=i
+}
+which.max(k.optm)
+#Accuracy plot
+plot(k.optm, type="b", xlab="K-Value",ylab="Accuracy level")
+
+##SVM
+classifier=svm(formula=y~.,data=train2,type='C-classification',kernel='linear')
+y_pred=predict(classifier,newdata=test2[-1])
+#Making confusion matrix
+cm=table(test2[,1],y_pred)
+#Calculate accuracy
+acc_svm=sum(diag(cm))/sum(cm)
+#See what happpens if we only use SC to do classification
+classifier_sc=svm(formula=y~.,data=train2[,1:162],type='C-classification',kernel='linear')
+y_pred_sc=predict(classifier_sc,newdata=test2[2:162])
+#Making confusion matrix
+cm_sc=table(test2$y,y_pred_sc)
+#Calculate accuracy
+acc_svm_sc=sum(diag(cm_sc))/sum(cm_sc)
+acc_svm
+acc_svm_sc
+
+
+#Prediction results for other traits. (testing error for linear regression, single tree, random forest and classification accuracy for knn and svm)
+pred1=prediction(1,X,results)
+pred1
