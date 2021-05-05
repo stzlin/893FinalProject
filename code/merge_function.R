@@ -61,7 +61,7 @@ identical(df$id,as.numeric(traits_data$id))
 df=data.frame(df,traits_data[,-1])
 #Record start and end location for traits in the merged data.
 traits_start=TNPCA_FC_Score_end+1
-traits_end=traits_start+175-1
+traits_end=traits_start+nrow(traits$traits.175)-1
 return (list(df=df,SC_start=SC_start,SC_end=SC_end,FC_start=FC_start,FC_end=FC_end,
             TNPCA_SC_Score_start=TNPCA_SC_Score_start,TNPCA_SC_Score_end=TNPCA_SC_Score_end,
             TNPCA_FC_Score_start=TNPCA_FC_Score_start,TNPCA_FC_Score_end=TNPCA_FC_Score_end,
