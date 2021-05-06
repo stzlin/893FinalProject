@@ -60,6 +60,9 @@ ggplot(top_n(traits.na,10,percentage), aes(x = reorder(traits.name, -percentage)
 
 ## Remove traits w/ more than 40% NA
 traits$traits.175 <-traits$traits.175[traits.na$percentage<=0.4,]
+traits.description <- traits.description[traits.na$percentage<=0.4,]
+traits.category <- traits.category[traits.na$percentage<=0.4]
+traits.type <- traits.type[traits.na$percentage<=0.4]
 nrow(traits$traits.175)
 
 results<- mergedata(SC,FC,TNPCA_Structural,TNPCA_Functional,traits)
@@ -299,23 +302,53 @@ which.max(k.optm)
 plot(k.optm, type="b", xlab="K-Value",ylab="Accuracy level")
 
 ##SVM
+#Linear kernel
 classifier=svm(formula=y~.,data=train2,type='C-classification',kernel='linear')
 y_pred=predict(classifier,newdata=test2[-1])
 #Making confusion matrix
 cm=table(test2[,1],y_pred)
 #Calculate accuracy
 acc_svm=sum(diag(cm))/sum(cm)
-#See what happpens if we only use SC to do classification
-classifier_sc=svm(formula=y~.,data=train2[,1:162],type='C-classification',kernel='linear')
-y_pred_sc=predict(classifier_sc,newdata=test2[2:162])
+#Radial kernel
+classifier=svm(formula=y~.,data=train2,type='C-classification',kernel='radial')
+y_pred=predict(classifier,newdata=test2[-1])
 #Making confusion matrix
-cm_sc=table(test2$y,y_pred_sc)
+cm=table(test2[,1],y_pred)
 #Calculate accuracy
-acc_svm_sc=sum(diag(cm_sc))/sum(cm_sc)
-acc_svm
-acc_svm_sc
+acc_svm_radial=sum(diag(cm))/sum(cm)
 
 
-#Prediction results for other traits. (testing error for linear regression, single tree, random forest and classification accuracy for knn and svm)
-pred1=prediction(1,X,results)
-pred1
+##Prediction results for other traits. (testing error for linear regression, single tree, random forest and classification accuracy for knn and svm)
+#Also try to only use SC PCA score, FC PCA score, TNPCA_SC_Score and TNPCA_FC_Score for prediction.
+X_sc=X=data.frame(sc.pca$x[,1:x_sc],
+data[,results$TNPCA_SC_Score_start:results$TNPCA_SC_Score_end])
+continuous_variable_index=which((traits.type=='Continuous'))
+n=length(continuous_variable_index)
+SC_FC_regression=data.frame(matrix(,nrow=n,ncol=3))
+colnames(SC_FC_regression)=c('testing_error_lm','testing_error_singletree','testing_error_rf')
+SC_regression=data.frame(matrix(,nrow=n,ncol=3))
+colnames(SC_regression)=c('testing_error_lm','testing_error_singletree','testing_error_rf')
+SC_FC_classification=data.frame(matrix(,nrow=n,ncol=3))
+colnames(SC_FC_classification)=c('acc_knn','acc_svm_linear','acc_svm_radial')
+SC_classification=data.frame(matrix(,nrow=n,ncol=3))
+colnames(SC_classification)=c('acc_knn','acc_svm_linear','acc_svm_radial')
+for (i in 1:n){
+    pred=prediction(continuous_variable_index[i],X,results)
+    pred_SC=prediction(continuous_variable_index[i],X_sc,results)
+    print(i)
+    SC_FC_regression[i,1]=pred[[1]]
+    SC_FC_regression[i,2]=pred[[2]]
+    SC_FC_regression[i,3]=pred[[3]]
+    SC_FC_classification[i,1]=pred[[4]]
+    SC_FC_classification[i,2]=pred[[5]]
+    SC_FC_classification[i,3]=pred[[6]]
+    SC_regression[i,1]=pred_SC[[1]]
+    SC_regression[i,2]=pred_SC[[2]]
+    SC_regression[i,3]=pred_SC[[3]]
+    SC_classification[i,1]=pred_SC[[4]]
+    SC_classification[i,2]=pred_SC[[5]]
+    SC_classification[i,3]=pred_SC[[6]]
+}
+#Find traits that have a high classification accuracy
+continuous_variable_index[SC_FC_classification$acc_svm_radial>0.7]
+continuous_variable_index[SC_FC_classification$acc_svm_radial>0.65]
