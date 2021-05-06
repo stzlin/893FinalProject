@@ -51,19 +51,20 @@ prediction = function(i,X,results) {
   acc_knn=sum(diag(cm_knn))/sum(cm_knn)
   
   ##SVM
+  #Linear kernel
   classifier=svm(formula=y~.,data=train2,type='C-classification',kernel='linear')
   y_pred=predict(classifier,newdata=test2[-1])
   #Making confusion matrix
   cm=table(test2[,1],y_pred)
   #Calculate accuracy
   acc_svm=sum(diag(cm))/sum(cm)
-  #See what happpens if we only use SC to do classification
-  classifier_sc=svm(formula=y~.,data=train2[,1:162],type='C-classification',kernel='linear')
-  y_pred_sc=predict(classifier_sc,newdata=test2[2:162])
+  #Radial kernel
+  classifier=svm(formula=y~.,data=train2,type='C-classification',kernel='radial')
+  y_pred=predict(classifier,newdata=test2[-1])
   #Making confusion matrix
-  cm_sc=table(test2$y,y_pred_sc)
+  cm=table(test2[,1],y_pred)
   #Calculate accuracy
-  acc_svm_sc=sum(diag(cm_sc))/sum(cm_sc)
+  acc_svm_radial=sum(diag(cm))/sum(cm)
   
-  return (list(testingerror_lm1,testingerror_singletree1,testingerror_rf1,acc_knn,acc_svm,acc_svm_sc))
+  return (list(testingerror_lm1,testingerror_singletree1,testingerror_rf1,acc_knn,acc_svm_linear,acc_svm_radial))
 }
