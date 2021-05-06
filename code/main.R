@@ -71,18 +71,12 @@ data<- results$df
 
 sc.pca <- prcomp(data[,c(results$SC_start:results$SC_end)], center = TRUE,scale. = TRUE)
 fc.pca <- prcomp(data[,c(results$FC_start:results$FC_end)], center = TRUE,scale. = TRUE)
-tnpca.sc.sdev <- apply(data[,c(results$TNPCA_SC_Score_start:results$TNPCA_SC_Score_end)],2,sd)
-tnpca.fc.sdev <- apply(data[,c(results$TNPCA_FC_Score_start:results$TNPCA_FC_Score_end)],2,sd)
 
 var_explained_sc <- data.frame(PC= paste0("PC",1:length(sc.pca$sdev)),
                                var_explained=(sc.pca$sdev)^2/sum((sc.pca$sdev)^2)*100) %>% arrange(desc(var_explained))
 var_explained_fc <- data.frame(PC= paste0("PC",1:length(fc.pca$sdev)),
                                var_explained=(fc.pca$sdev)^2/sum((fc.pca$sdev)^2)*100) %>% arrange(desc(var_explained))
 
-var_explained_tnpca_sc <- data.frame(PC= paste0("PC",1:length(tnpca.sc.sdev)),
-                               var_explained=(tnpca.sc.sdev)^2/sum((tnpca.sc.sdev)^2)*100) %>% arrange(desc(var_explained))
-var_explained_tnpca_fc <- data.frame(PC= paste0("PC",1:length(tnpca.fc.sdev)),
-                                     var_explained=(tnpca.fc.sdev)^2/sum((tnpca.fc.sdev)^2)*100) %>% arrange(desc(var_explained))
 
 plot1<-ggplot(var_explained_sc[1:10,] ,aes(x = reorder(PC,-var_explained), y=var_explained, group=1))+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
@@ -98,27 +92,11 @@ plot2<-ggplot(var_explained_fc[1:10,] ,aes(x = reorder(PC,-var_explained), y=var
   geom_line()+
   labs(title="Scree plot: PCA on fc", x = "", y = "Percentage of explained variance")
 
-plot3<-ggplot(var_explained_tnpca_sc[1:10,] ,aes(x = reorder(PC, -var_explained), y=var_explained, group=1))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        plot.title = element_text(color="black", size=14, face="bold.italic"))+
-  geom_point(size=4)+
-  geom_line()+
-  labs(title="Scree plot: TNPCA on sc", x = "", y = "Percentage of explained variance")
-
-plot4<-ggplot(var_explained_tnpca_fc[1:10,] ,aes(x = reorder(PC, -var_explained), y=var_explained, group=1))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        plot.title = element_text(color="black", size=14, face="bold.italic"))+
-  geom_point(size=4)+
-  geom_line()+
-  labs(title="Scree plot: TNPCA on fc", x = "", y = "Percentage of explained variance")
-
 grid.newpage()
 vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-pushViewport(viewport(layout = grid.layout(2, 2)))
+pushViewport(viewport(layout = grid.layout(1, 2)))
 print(plot1, vp = vplayout(1, 1))
 print(plot2, vp = vplayout(1, 2))
-print(plot3, vp = vplayout(2, 1))
-print(plot4, vp = vplayout(2, 2))
 
 ### Correlation between PC1 v.s. traits
 n <-results$traits_end-results$traits_start+1
