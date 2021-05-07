@@ -424,7 +424,7 @@ acc_svm_radial=sum(diag(cm))/sum(cm)
 
 ##Prediction results for other traits. (testing error for linear regression, single tree, random forest and classification accuracy for knn and svm)
 #Also try to only use SC PCA score, FC PCA score, TNPCA_SC_Score and TNPCA_FC_Score for prediction.
-X_sc=X=data.frame(sc.pca$x[,1:x_sc],
+X_sc=data.frame(sc.pca$x[,1:x_sc],
 data[,results$TNPCA_SC_Score_start:results$TNPCA_SC_Score_end])
 continuous_variable_index=which((traits.type=='Continuous'))
 n=length(continuous_variable_index)
@@ -439,7 +439,6 @@ colnames(SC_classification)=c('acc_knn','acc_svm_linear','acc_svm_radial')
 for (i in 1:n){
     pred=prediction(continuous_variable_index[i],X,results)
     pred_SC=prediction(continuous_variable_index[i],X_sc,results)
-    print(i)
     SC_FC_regression[i,1]=pred[[1]]
     SC_FC_regression[i,2]=pred[[2]]
     SC_FC_regression[i,3]=pred[[3]]
@@ -454,5 +453,5 @@ for (i in 1:n){
     SC_classification[i,3]=pred_SC[[6]]
 }
 #Find traits that have a high classification accuracy
-continuous_variable_index[SC_FC_classification$acc_svm_radial>0.7]
-continuous_variable_index[SC_FC_classification$acc_svm_radial>0.65]
+continuous_variable_index[SC_FC_classification$acc_svm_radial>0.67]
+continuous_variable_index[SC_FC_classification$acc_knn>0.67]
