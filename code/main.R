@@ -1,6 +1,7 @@
 library('R.matlab')
 library(xlsx)
 library(plotly)
+library(car)
 library(tidyr)
 library(dplyr)
 library(reshape2)
@@ -66,8 +67,19 @@ traits$traits.175 <-traits$traits.175[traits.na$percentage<=0.4,]
 traits.description <- traits.description[traits.na$percentage<=0.4,]
 traits.category <- traits.category[traits.na$percentage<=0.4]
 traits.type <- traits.type[traits.na$percentage<=0.4]
-nrow(traits$traits.175)
 
+results<- mergedata(SC,FC,TNPCA_Structural,TNPCA_Functional,traits)
+data<- results$df
+
+## Remove traits with constant value
+idx <- which(apply(data[,results$traits_start:results$traits_end], 2, function(x){sum(is.na(unique(x))==FALSE)}) ==1)
+data <- data[,-(results$traits_start+idx-1)]
+results$traits_end<-results$traits_end-1
+traits.description <- traits.description[-idx,]
+traits.category <- traits.category[-idx]
+traits.type <- traits.type[-idx]
+
+ncol(data[,results$traits_start:results$traits_end])
 table(traits.type)
 tmp_traits<-melt(table(traits.category))
 
@@ -76,16 +88,10 @@ ggplot(data = tmp_traits, aes(x= reorder(traits.category,-value), y = value, fil
   scale_fill_gradient2(low = "white", 
                        high = "purple") +
   theme(axis.text.y = element_text(size = 10, face = "bold"),
-    axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1), 
+        axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1), 
         plot.title = element_text(color="black", size=14, face="bold.italic")) +
   labs(title = "Traits Category", x = "", y = "# of traits", fill = "# of traits") 
-
-
-results<- mergedata(SC,FC,TNPCA_Structural,TNPCA_Functional,traits)
-data<- results$df
-
 ### Exploratory Data Analysis ###
-
 ## network embedding
 
 sc.pca <- prcomp(data[,c(results$SC_start:results$SC_end)], center = TRUE,scale. = TRUE)
@@ -118,17 +124,19 @@ print(plot1, vp = vplayout(1, 1))
 print(plot2, vp = vplayout(1, 2))
 
 ### Correlation between PC1 v.s. continuous traits
-n <-results$traits_end-results$traits_start+1
-n_c <- sum(traits.type=="Continuous")
-idx = c( results$TNPCA_SC_Score_start:(results$TNPCA_SC_Score_start+2),
+idx_cont_traits <- which(traits.type=="Continuous") + results$traits_start-1
+idx_pca = c( results$TNPCA_SC_Score_start:(results$TNPCA_SC_Score_start+2),
          results$TNPCA_FC_Score_start:(results$TNPCA_FC_Score_start+2))
-cor.pca.sc.traits<-matrix(0,ncol = n_c )
-cor.pca.fc.traits<-matrix(0,ncol = n_c )
-cor.tnpca.sc.traits<-matrix(0,ncol = n_c )
-cor.tnpca.fc.traits<-matrix(0,ncol = n_c )
+tmp_pca <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx_pca])
+n <- length(idx_cont_traits)
+
+cor.pca.sc.traits<-matrix(0,ncol = n)
+cor.pca.fc.traits<-matrix(0,ncol = n )
+cor.tnpca.sc.traits<-matrix(0,ncol = n )
+cor.tnpca.fc.traits<-matrix(0,ncol = n )
 for(i in 1:n){
   if(traits.type[i] == "Continuous"){
-    tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx], traits = data[ ,results$traits_start+i-1]) %>% drop_na() 
+    tmp <- data.frame(tmp_pca, traits = data[,idx_cont_traits[i]]) %>% drop_na() 
     stdev <- apply(tmp,2,sd) 
     if (sum(stdev ==0)>=1){
       print(i)
@@ -140,38 +148,54 @@ for(i in 1:n){
   }
 }
 par(mfrow = c(2,2))
-plot(1:n,cor.pca.sc.traits, type = "b", main = "cor btw sc pc1 and traits", 
-     xlab = "traits", ylab = "correlation", ylim = c(-1,1))
-plot(1:n,cor.pca.fc.traits, type = 'b', main = "cor btw fc pc1 and traits", 
-     xlab = "traits", ylab = "correlation", ylim = c(-1,1))
-plot(1:n,cor.tnpca.sc.traits, type = "b", main = "cor btw sc tnpc1 and traits", 
-     xlab = "traits", ylab = "correlation", ylim = c(-1,1))
-plot(1:n,cor.tnpca.fc.traits, type = "b", main = "cor btw fc tnpc1 and traits", 
-     xlab = "traits", ylab = "correlation", ylim = c(-1,1))
+plot(1:n,cor.pca.sc.traits, type = "p", main = "PC1 for SC v.s. continuous traits", 
+     xlab = "continuous traits", ylab = "correlation", ylim = c(-0.5,0.5))
+abline(h = 0.3, col ="red", lty = 2)
+abline(h = -0.3, col ="red", lty = 2)
+plot(1:n,cor.pca.fc.traits, type = 'p', main = "PC1 for FC v.s. continuous traits", 
+     xlab = "continuous traits", ylab = "correlation", ylim = c(-0.5,0.5))
+abline(h = 0.3, col ="red", lty = 2)
+abline(h = -0.3, col ="red", lty = 2)
+plot(1:n,cor.tnpca.sc.traits, type = "p", main = "TNPC1 for SC v.s. continuous traits", 
+     xlab = "continuous traits", ylab = "correlation", ylim = c(-0.5,0.5))
+abline(h = 0.3, col ="red", lty = 2)
+abline(h = -0.3, col ="red", lty = 2)
+plot(1:n,cor.tnpca.fc.traits, type = "p", main = "TNPC1 for FC v.s. continuous traits", 
+     xlab = "continuous traits", ylab = "correlation", ylim = c(-0.5,0.5))
+abline(h = 0.3, col ="red", lty = 2)
+abline(h = -0.3, col ="red", lty = 2)
 
 which(abs(cor.pca.sc.traits)>0.3)
 which(abs(cor.pca.fc.traits)>0.1)
 which(abs(cor.tnpca.sc.traits)>0.3)
 which(abs(cor.tnpca.fc.traits)>0.1)
+colnames(data)[results$traits_start+which(abs(cor.pca.sc.traits)>0.3)-1]
+traits.category[which(abs(cor.pca.sc.traits)>0.3)]
 ## First 3 principal components v.s. traits
-i = 51 #SC PC1 can distringuish top 100 values and bottom 100 traits in 51 
-tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx], data[ ,results$traits_start+i-1]) %>% 
+i = 49 #SC PC1 can distringuish top 100 values and bottom 100 traits in 50
+tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx_pca], data[ ,results$traits_start+i-1]) %>% 
   setNames(c("sc.pc1","sc.pc2","sc.pc3","fc.pc1","fc.pc2","fc.pc3",
-             "tn.sc.pc1", "tn.sc.pc2","tn.sc.pc3", "tn.fc.pc1", "tn.fc.pc2", "tn.fc.pc3","traits")) %>% drop_na() 
+             "tn.sc.pc1", "tn.sc.pc2","tn.sc.pc3", "tn.fc.pc1", "tn.fc.pc2", "tn.fc.pc3", colnames(data)[results$traits_start+i-1])) %>% drop_na() 
 tmp3d<-tmp[order(tmp[,ncol(tmp)], decreasing = TRUE),] %>%
   filter(row_number() > max(row_number()) - 100 | row_number() <= 100) 
+par(mfrow = c(2,2))
 #PCA for SC v.s. traits
-plot_ly(tmp3d, x = ~sc.pc1, y = ~sc.pc2, z = ~sc.pc3, color = ~traits, 
-        colors = c('#BF382A', '#0C4B8E'))
+plot_ly(tmp3d, x = ~sc.pc1, y = ~sc.pc2, z = ~sc.pc3, color = ~GaitSpeed_Comp,  
+        colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
+  layout(title = 'Motor: GaitSpeed_Comp')
+
 #PCA for FC v.s. traits
-plot_ly(tmp3d, x = ~fc.pc1, y = ~fc.pc2, z = ~fc.pc3, color = ~traits, 
-        colors = c('#BF382A', '#0C4B8E'))
+plot_ly(tmp3d, x = ~fc.pc1, y = ~fc.pc2, z = ~fc.pc3, color = ~GaitSpeed_Comp, 
+        colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
+  layout(title = 'Motor: GaitSpeed_Comp')
 #TNPCA for SC v.s. traits  
-plot_ly(tmp3d, x = ~tn.sc.pc1, y = ~tn.sc.pc2, z = ~tn.sc.pc3, color = ~traits, 
-        colors = c('#BF382A', '#0C4B8E'))
+plot_ly(tmp3d, x = ~tn.sc.pc1, y = ~tn.sc.pc2, z = ~tn.sc.pc3, color = ~GaitSpeed_Comp, 
+        colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
+  layout(title = 'Motor: Endurance_AgeAdj')
 #TNPCA for FC v.s. traits
-plot_ly(tmp3d, x = ~tn.fc.pc1, y = ~tn.fc.pc2, z = ~tn.fc.pc3, color = ~traits, 
-        colors = c('#BF382A', '#0C4B8E')) 
+plot_ly(tmp3d, x = ~tn.fc.pc1, y = ~tn.fc.pc2, z = ~tn.fc.pc3, color = ~GaitSpeed_Comp, 
+        colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
+  layout(title = 'Motor: GaitSpeed_Comp')
 
 ## T test PC1 v.s. traits##
 idx <- seq(1,10,3)
