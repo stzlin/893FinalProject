@@ -39,6 +39,8 @@ pathname2 <- file.path("TNPCA_Result", "TNPCA_Coeff_HCP_Functional_Connectome.ma
 TNPCA_Structural <- readMat(pathname1)
 TNPCA_Functional <- readMat(pathname2)
 
+
+### The data description file has been changed so that the index matches the one in traits extraction file.
 traits.description <- read.xlsx("traits/175traits/Details_175_Traits.xls",1) ###the Type of 175traits does not seem to correspond to the description
 traits.category <- factor(traits.description$Category)
 traits.type <- traits.description$Typle
@@ -56,7 +58,8 @@ ggplot(top_n(traits.na,10,percentage), aes(x = reorder(traits.name, -percentage)
   scale_fill_gradient2(name = "correlation")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
         plot.title = element_text(color="black", size=14, face="bold.italic")) +
-  labs(title = paste("Top 10 traits that has most number of missing value") , x = "Traits", y = "percentage") 
+  labs(title = paste("Top 10 traits that has most number of NAs") , x = "Traits", y = "percentage") 
+
 
 ## Remove traits w/ more than 40% NA
 traits$traits.175 <-traits$traits.175[traits.na$percentage<=0.4,]
@@ -64,6 +67,19 @@ traits.description <- traits.description[traits.na$percentage<=0.4,]
 traits.category <- traits.category[traits.na$percentage<=0.4]
 traits.type <- traits.type[traits.na$percentage<=0.4]
 nrow(traits$traits.175)
+
+table(traits.type)
+tmp_traits<-melt(table(traits.category))
+
+ggplot(data = tmp_traits, aes(x= reorder(traits.category,-value), y = value, fill = value)) + geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_gradient2(low = "white", 
+                       high = "purple") +
+  theme(axis.text.y = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1), 
+        plot.title = element_text(color="black", size=14, face="bold.italic")) +
+  labs(title = "Traits Category", x = "", y = "# of traits", fill = "# of traits") 
+
 
 results<- mergedata(SC,FC,TNPCA_Structural,TNPCA_Functional,traits)
 data<- results$df
@@ -101,38 +117,41 @@ pushViewport(viewport(layout = grid.layout(1, 2)))
 print(plot1, vp = vplayout(1, 1))
 print(plot2, vp = vplayout(1, 2))
 
-### Correlation between PC1 v.s. traits
+### Correlation between PC1 v.s. continuous traits
 n <-results$traits_end-results$traits_start+1
-idx = c( results$TNPCA_FC_Score_start+25,results$TNPCA_FC_Score_start+47,results$TNPCA_FC_Score_start+57,
+n_c <- sum(traits.type=="Continuous")
+idx = c( results$TNPCA_SC_Score_start:(results$TNPCA_SC_Score_start+2),
          results$TNPCA_FC_Score_start:(results$TNPCA_FC_Score_start+2))
-cor.pca.sc.traits<-matrix(0,ncol = n )
-cor.pca.fc.traits<-matrix(0,ncol = n )
-cor.tnpca.sc.traits<-matrix(0,ncol = n )
-cor.tnpca.fc.traits<-matrix(0,ncol = n )
+cor.pca.sc.traits<-matrix(0,ncol = n_c )
+cor.pca.fc.traits<-matrix(0,ncol = n_c )
+cor.tnpca.sc.traits<-matrix(0,ncol = n_c )
+cor.tnpca.fc.traits<-matrix(0,ncol = n_c )
 for(i in 1:n){
-  tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx], traits = data[ ,results$traits_start+i-1]) %>% drop_na() 
-  stdev <- apply(tmp,2,sd) 
-  if (sum(stdev ==0)>=1){
-    print(i)
+  if(traits.type[i] == "Continuous"){
+    tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx], traits = data[ ,results$traits_start+i-1]) %>% drop_na() 
+    stdev <- apply(tmp,2,sd) 
+    if (sum(stdev ==0)>=1){
+      print(i)
+    }
+    cor.pca.sc.traits[i] <- cor(tmp[,c(1,ncol(tmp))])[1,2]
+    cor.pca.fc.traits[i] <- cor(tmp[,c(4,ncol(tmp))])[1,2]
+    cor.tnpca.sc.traits[i] <- cor(tmp[,c(7,ncol(tmp))])[1,2]
+    cor.tnpca.fc.traits[i] <- cor(tmp[,c(10,ncol(tmp))])[1,2]
   }
-  cor.pca.sc.traits[i] <- cor(tmp[,c(1,ncol(tmp))])[1,2]
-  cor.pca.fc.traits[i] <- cor(tmp[,c(4,ncol(tmp))])[1,2]
-  cor.tnpca.sc.traits[i] <- cor(tmp[,c(7,ncol(tmp))])[1,2]
-  cor.tnpca.fc.traits[i] <- cor(tmp[,c(10,ncol(tmp))])[1,2]
 }
 par(mfrow = c(2,2))
-plot(1:n,cor.pca.sc.traits, type = "b", main = "cor between sc pc1 and 175 traits", 
+plot(1:n,cor.pca.sc.traits, type = "b", main = "cor btw sc pc1 and traits", 
      xlab = "traits", ylab = "correlation", ylim = c(-1,1))
-plot(1:n,cor.pca.fc.traits, type = 'b', main = "cor between fc pc1 and 175 traits", 
+plot(1:n,cor.pca.fc.traits, type = 'b', main = "cor btw fc pc1 and traits", 
      xlab = "traits", ylab = "correlation", ylim = c(-1,1))
-plot(1:n,cor.tnpca.fc.traits, type = "b", main = "cor between sc tnpc1 and 175 traits", 
+plot(1:n,cor.tnpca.sc.traits, type = "b", main = "cor btw sc tnpc1 and traits", 
      xlab = "traits", ylab = "correlation", ylim = c(-1,1))
-plot(1:n,cor.tnpca.sc.traits, type = "b", main = "cor between fc tnpc1 and 175 traits", 
+plot(1:n,cor.tnpca.fc.traits, type = "b", main = "cor btw fc tnpc1 and traits", 
      xlab = "traits", ylab = "correlation", ylim = c(-1,1))
 
 which(abs(cor.pca.sc.traits)>0.3)
 which(abs(cor.pca.fc.traits)>0.1)
-which(abs(cor.tnpca.sc.traits)>0.1)
+which(abs(cor.tnpca.sc.traits)>0.3)
 which(abs(cor.tnpca.fc.traits)>0.1)
 ## First 3 principal components v.s. traits
 i = 51 #SC PC1 can distringuish top 100 values and bottom 100 traits in 51 
