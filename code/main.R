@@ -134,7 +134,7 @@ cor.pca.sc.traits<-matrix(0,ncol = n)
 cor.pca.fc.traits<-matrix(0,ncol = n )
 cor.tnpca.sc.traits<-matrix(0,ncol = n )
 cor.tnpca.fc.traits<-matrix(0,ncol = n )
-for(i in 1:n){
+for(i in 49){
   if(traits.type[i] == "Continuous"){
     tmp <- data.frame(tmp_pca, traits = data[,idx_cont_traits[i]]) %>% drop_na() 
     stdev <- apply(tmp,2,sd) 
@@ -169,33 +169,33 @@ which(abs(cor.pca.sc.traits)>0.3)
 which(abs(cor.pca.fc.traits)>0.1)
 which(abs(cor.tnpca.sc.traits)>0.3)
 which(abs(cor.tnpca.fc.traits)>0.1)
-colnames(data)[results$traits_start+which(abs(cor.pca.sc.traits)>0.3)-1]
-traits.category[which(abs(cor.pca.sc.traits)>0.3)]
+colnames(data)[idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)]]
+traits.category[idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)]-results$traits_start+1]
 ## First 3 principal components v.s. traits
-i = 49 #SC PC1 can distringuish top 100 values and bottom 100 traits in 50
-tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx_pca], data[ ,results$traits_start+i-1]) %>% 
+i = idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)][2] #SC PC1 can distringuish top 100 values and bottom 100 traits in 50
+tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx_pca], data[ ,i]) %>% 
   setNames(c("sc.pc1","sc.pc2","sc.pc3","fc.pc1","fc.pc2","fc.pc3",
-             "tn.sc.pc1", "tn.sc.pc2","tn.sc.pc3", "tn.fc.pc1", "tn.fc.pc2", "tn.fc.pc3", colnames(data)[results$traits_start+i-1])) %>% drop_na() 
+             "tn.sc.pc1", "tn.sc.pc2","tn.sc.pc3", "tn.fc.pc1", "tn.fc.pc2", "tn.fc.pc3", colnames(data)[i])) %>% drop_na() 
 tmp3d<-tmp[order(tmp[,ncol(tmp)], decreasing = TRUE),] %>%
   filter(row_number() > max(row_number()) - 100 | row_number() <= 100) 
 par(mfrow = c(2,2))
 #PCA for SC v.s. traits
-plot_ly(tmp3d, x = ~sc.pc1, y = ~sc.pc2, z = ~sc.pc3, color = ~GaitSpeed_Comp,  
+plot_ly(tmp3d, x = ~sc.pc1, y = ~sc.pc2, z = ~sc.pc3, color = ~Strength_AgeAdj,  
         colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
-  layout(title = 'Motor: GaitSpeed_Comp')
+  layout(title = 'Motor: Strength_AgeAdj')
 
 #PCA for FC v.s. traits
-plot_ly(tmp3d, x = ~fc.pc1, y = ~fc.pc2, z = ~fc.pc3, color = ~GaitSpeed_Comp, 
+plot_ly(tmp3d, x = ~fc.pc1, y = ~fc.pc2, z = ~fc.pc3, color = ~Strength_AgeAdj, 
         colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
-  layout(title = 'Motor: GaitSpeed_Comp')
+  layout(title = 'Motor: Strength_AgeAdj')
 #TNPCA for SC v.s. traits  
-plot_ly(tmp3d, x = ~tn.sc.pc1, y = ~tn.sc.pc2, z = ~tn.sc.pc3, color = ~GaitSpeed_Comp, 
+plot_ly(tmp3d, x = ~tn.sc.pc1, y = ~tn.sc.pc2, z = ~tn.sc.pc3, color = ~Strength_AgeAdj, 
         colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
-  layout(title = 'Motor: Endurance_AgeAdj')
+  layout(title = 'Motor: Strength_AgeAdj')
 #TNPCA for FC v.s. traits
-plot_ly(tmp3d, x = ~tn.fc.pc1, y = ~tn.fc.pc2, z = ~tn.fc.pc3, color = ~GaitSpeed_Comp, 
+plot_ly(tmp3d, x = ~tn.fc.pc1, y = ~tn.fc.pc2, z = ~tn.fc.pc3, color = ~Strength_AgeAdj, 
         colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
-  layout(title = 'Motor: GaitSpeed_Comp')
+  layout(title = 'Motor: Strength_AgeAdj')
 
 ## T test PC1 v.s. traits##
 idx <- seq(1,10,3)
