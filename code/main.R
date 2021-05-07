@@ -122,6 +122,17 @@ vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
 pushViewport(viewport(layout = grid.layout(1, 2)))
 print(plot1, vp = vplayout(1, 1))
 print(plot2, vp = vplayout(1, 2))
+### Continuous traits v.s. category
+idx_cont_traits <- which(traits.type=="Continuous") + results$traits_start-1
+tmp_cont_traits<-melt(table(traits.category[which(traits.type=="Continuous")]))
+ggplot(data = tmp_cont_traits, aes(x= reorder(Var1,-value), y = value, fill = value)) + geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_gradient2(low = "white", 
+                       high = "purple") +
+  theme(axis.text.y = element_text(size = 10, face = "bold"),
+        axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1), 
+        plot.title = element_text(color="black", size=14, face="bold.italic")) +
+  labs(title = "Continuous Traits Category", x = "", y = "# of traits", fill = "# of traits") 
 
 ### Correlation between PC1 v.s. continuous traits
 idx_cont_traits <- which(traits.type=="Continuous") + results$traits_start-1
@@ -172,7 +183,7 @@ which(abs(cor.tnpca.fc.traits)>0.1)
 colnames(data)[idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)]]
 traits.category[idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)]-results$traits_start+1]
 ## First 3 principal components v.s. traits
-i = idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)][2] #SC PC1 can distringuish top 100 values and bottom 100 traits in 50
+i = idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)][1] #SC PC1 can distringuish top 100 values and bottom 100 traits in 50
 tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx_pca], data[ ,i]) %>% 
   setNames(c("sc.pc1","sc.pc2","sc.pc3","fc.pc1","fc.pc2","fc.pc3",
              "tn.sc.pc1", "tn.sc.pc2","tn.sc.pc3", "tn.fc.pc1", "tn.fc.pc2", "tn.fc.pc3", colnames(data)[i])) %>% drop_na() 
@@ -200,23 +211,56 @@ plot_ly(tmp3d, x = ~tn.fc.pc1, y = ~tn.fc.pc2, z = ~tn.fc.pc3, color = ~Strength
 ## T test PC1 v.s. traits##
 idx <- seq(1,10,3)
 n <- length(idx)
-two.sided.t.pvalue<- matrix(0,1,n)
-
-for(j in 1:n){
-  two.sided.t.pvalue[j] = t.test(tmp3d[1:100,idx[j]],tmp3d[101:200,idx[j]])$p.value
+two.sided.t.pvalue<- matrix(0,length(idx_cont_traits),n)
+for(i in 1:length(idx_cont_traits)){
+  tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx_pca], data[ ,idx_cont_traits[i]]) %>% 
+    setNames(c("sc.pc1","sc.pc2","sc.pc3","fc.pc1","fc.pc2","fc.pc3",
+               "tn.sc.pc1", "tn.sc.pc2","tn.sc.pc3", "tn.fc.pc1", "tn.fc.pc2", "tn.fc.pc3", colnames(data)[i])) %>% drop_na() 
+  tmp3d<-tmp[order(tmp[,ncol(tmp)], decreasing = TRUE),] %>%
+    filter(row_number() > max(row_number()) - 100 | row_number() <= 100) 
+  for(j in 1:n){
+    two.sided.t.pvalue[i,j] = t.test(tmp3d[1:100,idx[j]],tmp3d[101:200,idx[j]])$p.value
+  }
 }
+rownames(two.sided.t.pvalue) <- traits.description$Column_Header[which(traits.type=="Continuous")]
+colnames(two.sided.t.pvalue) <- c("sc.PC1", "fc.PC1", "sc.TNPC1", "fc.TNPC1")
+two.sided.t.pvalue <-data.frame(two.sided.t.pvalue, category = traits.category[which(traits.type=="Continuous")])
 
+plot1<-ggplot(data = melt(two.sided.t.pvalue[,c("sc.PC1", "category")]), aes(x= category , y = value, value)) + geom_jitter() +
+  geom_hline(yintercept=0.05, linetype="dashed", 
+             color = "red", size=1)+
+  scale_fill_gradient2(low = "white", 
+                       high = "purple") +
+  theme(axis.text.x = element_text(angle = 40, vjust = 1, hjust=1), 
+        plot.title = element_text(color="black", size=14, face="bold.italic")) +
+  labs(title = "Two-sided Hypothesis Testing for sc.PC1", x = "", y = "p-value") 
 
-## summary statistics of traits
-n <-results$traits_end-results$traits_start+1
-plot1<-ggplot(stack(data[,results$traits_start:(results$traits_start+49)]), aes(x = ind, y = values)) +
-  geom_boxplot()
-plot2<-ggplot(stack(data[,(results$traits_start+50):(results$traits_start+99)]), aes(x = ind, y = values)) +
-  geom_boxplot()
-plot3<-ggplot(stack(data[,(results$traits_start+100):(results$traits_start+149)]), aes(x = ind, y = values)) +
-  geom_boxplot()
-plot4<-ggplot(stack(data[,(results$traits_start+150):(results$traits_end)]), aes(x = ind, y = values)) +
-  geom_boxplot()
+plot2<-ggplot(data = melt(two.sided.t.pvalue[,c("fc.PC1", "category")]), aes(x= category , y = value, value)) + geom_jitter() +
+  geom_hline(yintercept=0.05, linetype="dashed", 
+             color = "red", size=1)+
+  scale_fill_gradient2(low = "white", 
+                       high = "purple") +
+  theme(axis.text.x = element_text(angle = 40, vjust = 1, hjust=1), 
+        plot.title = element_text(color="black", size=14, face="bold.italic")) +
+  labs(title = "Two-sided Hypothesis Testing for fc.PC1", x = "", y = "p-value")
+
+plot3<-ggplot(data = melt(two.sided.t.pvalue[,c("sc.TNPC1", "category")]), aes(x= category , y = value, value)) + geom_jitter() +
+  geom_hline(yintercept=0.05, linetype="dashed", 
+             color = "red", size=1)+
+  scale_fill_gradient2(low = "white", 
+                       high = "purple") +
+  theme(axis.text.x = element_text(angle = 40, vjust = 1, hjust=1), 
+        plot.title = element_text(color="black", size=14, face="bold.italic")) +
+  labs(title = "Two-sided Hypothesis Testing for sc.TNPC1", x = "", y = "p-value")
+
+plot4<-ggplot(data = melt(two.sided.t.pvalue[,c("fc.TNPC1", "category")]), aes(x= category , y = value, value)) + geom_jitter() +
+  geom_hline(yintercept=0.05, linetype="dashed", 
+             color = "red", size=1)+
+  scale_fill_gradient2(low = "white", 
+                       high = "purple") +
+  theme(axis.text.x = element_text(angle = 40, vjust = 1, hjust=1), 
+        plot.title = element_text(color="black", size=14, face="bold.italic")) +
+  labs(title = "Two-sided Hypothesis Testing for fc.TNPC1", x = "", y = "p-value")
 
 
 grid.newpage()
@@ -226,6 +270,23 @@ print(plot1, vp = vplayout(1, 1))
 print(plot2, vp = vplayout(1, 2))
 print(plot3, vp = vplayout(2, 1))
 print(plot4, vp = vplayout(2, 2))
+
+## summary statistics of traits
+
+plot1<-ggplot(stack(data[,idx_cont_traits[1:50]]), aes(x = ind, y = values)) +
+  geom_boxplot()
+plot2<-ggplot(stack(data[,idx_cont_traits[51:100]]), aes(x = ind, y = values)) +
+  geom_boxplot()
+plot3<-ggplot(stack(data[,idx_cont_traits[101:139]]), aes(x = ind, y = values)) +
+  geom_boxplot()
+
+
+grid.newpage()
+vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+pushViewport(viewport(layout = grid.layout(2, 2)))
+print(plot1, vp = vplayout(1, 1))
+print(plot2, vp = vplayout(1, 2))
+print(plot3, vp = vplayout(2, 1))
 
 ## Correlation matrix btw traits##
 Main.category <- unique(traits.category)
