@@ -103,7 +103,6 @@ var_explained_sc <- data.frame(PC= paste0("PC",1:length(sc.pca$sdev)),
 var_explained_fc <- data.frame(PC= paste0("PC",1:length(fc.pca$sdev)),
                                var_explained=(fc.pca$sdev)^2/sum((fc.pca$sdev)^2)*100) %>% arrange(desc(var_explained))
 
-
 plot1<-ggplot(var_explained_sc[1:10,] ,aes(x = reorder(PC,-var_explained), y=var_explained, group=1))+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         plot.title = element_text(color="black", size=14, face="bold.italic"))+
@@ -148,7 +147,7 @@ cor.pca.sc.traits<-matrix(0,ncol = n)
 cor.pca.fc.traits<-matrix(0,ncol = n )
 cor.tnpca.sc.traits<-matrix(0,ncol = n )
 cor.tnpca.fc.traits<-matrix(0,ncol = n )
-for(i in 49){
+for(i in 1:n){
   if(traits.type[i] == "Continuous"){
     tmp <- data.frame(tmp_pca, traits = data[,idx_cont_traits[i]]) %>% drop_na() 
     stdev <- apply(tmp,2,sd) 
