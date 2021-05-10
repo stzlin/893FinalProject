@@ -42,7 +42,7 @@ TNPCA_Functional <- readMat(pathname2)
 
 
 ### The data description file has been changed so that the index matches the one in traits extraction file.
-traits.description <- read.xlsx("traits/175traits/Details_175_Traits.xls",1) ###the Type of 175traits does not seem to correspond to the description
+traits.description <- read.xlsx("traits/175traits/Details_175_Traits.xls",1) 
 traits.category <- factor(traits.description$Category)
 traits.type <- traits.description$Typle
 
@@ -79,6 +79,7 @@ traits.description <- traits.description[-idx,]
 traits.category <- traits.category[-idx]
 traits.type <- traits.type[-idx]
 
+### Traits category
 ncol(data[,results$traits_start:results$traits_end])
 table(traits.type)
 tmp_traits<-melt(table(traits.category))
@@ -91,7 +92,7 @@ ggplot(data = tmp_traits, aes(x= reorder(traits.category,-value), y = value, fil
         axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1), 
         plot.title = element_text(color="black", size=14, face="bold.italic")) +
   labs(title = "Traits Category", x = "", y = "# of traits", fill = "# of traits") 
-### Exploratory Data Analysis ###
+
 ## network embedding
 
 sc.pca <- prcomp(data[,c(results$SC_start:results$SC_end)], center = TRUE,scale. = TRUE)
@@ -122,6 +123,8 @@ vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
 pushViewport(viewport(layout = grid.layout(1, 2)))
 print(plot1, vp = vplayout(1, 1))
 print(plot2, vp = vplayout(1, 2))
+
+### Exploratory Data Analysis ###
 ### Continuous traits v.s. category
 idx_cont_traits <- which(traits.type=="Continuous") + results$traits_start-1
 tmp_cont_traits<-melt(table(traits.category[which(traits.type=="Continuous")]))
@@ -182,8 +185,9 @@ which(abs(cor.tnpca.sc.traits)>0.3)
 which(abs(cor.tnpca.fc.traits)>0.1)
 colnames(data)[idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)]]
 traits.category[idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)]-results$traits_start+1]
+
 ## First 3 principal components v.s. traits
-i = idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)][1] #SC PC1 can distringuish top 100 values and bottom 100 traits in 50
+i = idx_cont_traits[which(abs(cor.pca.sc.traits)>0.3)][1] #SC PC1 can distinguish top 100 values and bottom 100 traits in 50
 tmp <- data.frame(sc.pca$x[,1:3], fc.pca$x[,1:3], data[,idx_pca], data[ ,i]) %>% 
   setNames(c("sc.pc1","sc.pc2","sc.pc3","fc.pc1","fc.pc2","fc.pc3",
              "tn.sc.pc1", "tn.sc.pc2","tn.sc.pc3", "tn.fc.pc1", "tn.fc.pc2", "tn.fc.pc3", colnames(data)[i])) %>% drop_na() 
@@ -191,22 +195,21 @@ tmp3d<-tmp[order(tmp[,ncol(tmp)], decreasing = TRUE),] %>%
   filter(row_number() > max(row_number()) - 100 | row_number() <= 100) 
 par(mfrow = c(2,2))
 #PCA for SC v.s. traits
-plot_ly(tmp3d, x = ~sc.pc1, y = ~sc.pc2, z = ~sc.pc3, color = ~Strength_AgeAdj,  
+plot_ly(tmp3d, x = ~sc.pc1, y = ~sc.pc2, z = ~sc.pc3, color = ~Strength_Unadj,  
         colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
-  layout(title = 'Motor: Strength_AgeAdj')
-
+  layout(title = 'Motor: Strength_Unadj')
 #PCA for FC v.s. traits
-plot_ly(tmp3d, x = ~fc.pc1, y = ~fc.pc2, z = ~fc.pc3, color = ~Strength_AgeAdj, 
+plot_ly(tmp3d, x = ~fc.pc1, y = ~fc.pc2, z = ~fc.pc3, color = ~Strength_Unadj, 
         colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
-  layout(title = 'Motor: Strength_AgeAdj')
+  layout(title = 'Motor: Strength_Unadj')
 #TNPCA for SC v.s. traits  
-plot_ly(tmp3d, x = ~tn.sc.pc1, y = ~tn.sc.pc2, z = ~tn.sc.pc3, color = ~Strength_AgeAdj, 
+plot_ly(tmp3d, x = ~tn.sc.pc1, y = ~tn.sc.pc2, z = ~tn.sc.pc3, color = ~Strength_Unadj, 
         colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
-  layout(title = 'Motor: Strength_AgeAdj')
+  layout(title = 'Motor: Strength_Unadj')
 #TNPCA for FC v.s. traits
-plot_ly(tmp3d, x = ~tn.fc.pc1, y = ~tn.fc.pc2, z = ~tn.fc.pc3, color = ~Strength_AgeAdj, 
+plot_ly(tmp3d, x = ~tn.fc.pc1, y = ~tn.fc.pc2, z = ~tn.fc.pc3, color = ~Strength_Unadj, 
         colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
-  layout(title = 'Motor: Strength_AgeAdj')
+  layout(title = 'Motor: Strength_Unadj')
 
 ## T test PC1 v.s. traits##
 idx <- seq(1,10,3)
